@@ -57,7 +57,6 @@ def start_client():
         # 加密后发送
         encrypted_msg = encrypt.encrypt(tagged_msg)
         client_socket.send(encrypted_msg.encode('utf-8'))
-        time.sleep(0.05)
 
     client_socket.close()
     print("已退出")
