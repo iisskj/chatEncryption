@@ -1,12 +1,14 @@
 # server.py
 import socket
 import threading
+import time
 
 clients = []
 
 def handle_client(client_socket):
     while True:
         try:
+            time.sleep(0.01)
             msg = client_socket.recv(1024).decode('utf-8')
             if msg:
                 print(f"转发消息: {msg}")
@@ -33,6 +35,7 @@ def start_server():
     print(f"服务器启动，监听 {config.SERVER_IP}:{config.PORT}")
 
     while True:
+        time.sleep(0.05)
         client_socket, addr = server.accept()
         print(f"连接来自 {addr}")
         clients.append(client_socket)
