@@ -1,47 +1,55 @@
-# server.py
+# server.py - 低资源占用版
 import socket
-import threading
-import time
-
-clients = []
-
-def handle_client(client_socket):
-    while True:
-        try:
-            time.sleep(0.01)
-            msg = client_socket.recv(1024).decode('utf-8')
-            if msg:
-                print(f"转发消息: {msg}")
-                for c in clients:
-                    if c != client_socket:
-                        try:
-                            c.send(msg.encode('utf-8'))
-                        except:
-                            c.close()
-                            clients.remove(c)
-            else:
-                break
-        except:
-            break
-    if client_socket in clients:
-        clients.remove(client_socket)
-    client_socket.close()
+import select
+import encrypt
 
 def start_server():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind((config.SERVER_IP, config.PORT))
+    server.bind(('0.0.0.0', 5000))
     server.listen(5)
-    print(f"服务器启动，监听 {config.SERVER_IP}:{config.PORT}")
+    server.setblocking(False)  # 非阻塞
+    print("🌐 服务器启动（低资源模式）...")
+
+    clients = []
+    inputs = [server]
 
     while True:
-        time.sleep(0.05)
-        client_socket, addr = server.accept()
-        print(f"连接来自 {addr}")
-        clients.append(client_socket)
-        thread = threading.Thread(target=handle_client, args=(client_socket,))
-        thread.start()
+        # select 等待有数据可读的 socket
+        readable, _, _ = select.select(inputs, [], [], 0.1)  # 超时 100ms
+
+        for sock in readable:
+            if sock is server:
+                # 新连接
+                conn, addr = server.accept()
+                conn.setblocking(False)
+                inputs.append(conn)
+                clients.append(conn)
+                print(f"✅ {addr} 加入")
+            else:
+                # 接收消息
+                try:
+                    data = sock.recv(2048)
+                    if data:
+                        # 转发给其他客户端
+                        for client in clients:
+                            if client != sock:
+                                try:
+                                    client.send(data)
+                                except:
+                                    client.close()
+                                    inputs.remove(client)
+                                    clients.remove(client)
+                    else:
+                        # 客户端断开
+                        inputs.remove(sock)
+                        clients.remove(sock)
+                        sock.close()
+                except:
+                    pass  # 忽略异常，避免忙循环
+
+        # 可在此处加空闲任务或日志
+        # time.sleep(0.001)  # 可选：进一步降低 CPU
 
 if __name__ == "__main__":
-    import config
     start_server()
