@@ -5,12 +5,14 @@ import threading
 import config
 import encrypt
 import random
+import time
 
 # 客户端使用一个固定本地端口范围（避免冲突）
 LOCAL_PORT = random.randint(1001, 1030)  # 模拟“端口标识”
 
 def receive_messages(client_socket):
     while True:
+        time.sleep(0.01)
         try:
             encrypted_msg = client_socket.recv(2048).decode('utf-8', errors='ignore')
             if not encrypted_msg:
@@ -55,6 +57,7 @@ def start_client():
         # 加密后发送
         encrypted_msg = encrypt.encrypt(tagged_msg)
         client_socket.send(encrypted_msg.encode('utf-8'))
+        time.sleep(0.05)
 
     client_socket.close()
     print("已退出")
